@@ -17,7 +17,7 @@
 		"source": "https://github.com/AnzenKodo/small-rss-php"
 	},
 	"require": {
-		"php": ">=8.0",
+		"php": ">=8.0"
 	},
 	"autoload": {
 		"classmap": ["src/"]
