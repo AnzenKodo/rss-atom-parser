@@ -1,6 +1,6 @@
 {
 	"name": "small-rss-php",
-	"description": "RSS & Atom Feeds for PHP is a very small and easy-to-use library for consuming an RSS and Atom feed",
+	"description": "RSS & Atom feed parser for PHP. Very small and easy-to-use library for parsing your feeds.",
 	"keywords": ["rss", "atom", "feed"],
 	"homepage": "https://github.com/AnzenKodo/small-rss-php",
 	"license": ["unlicense"],
