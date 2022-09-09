@@ -1,25 +1,34 @@
 {
-	"name": "anzenkodo/small-rss-php",
-	"description": "RSS & Atom feed parser for PHP. Very small and easy-to-use library for parsing your feeds.",
-	"keywords": ["rss", "atom", "feed"],
-	"homepage": "https://github.com/AnzenKodo/small-rss-php",
-	"license": ["unlicense"],
-	"authors": [
-		{
-			"name": "AnzenKodo",
-			"email": "AnzenKodo@altmails.com",
-			"homepage": "https://AnzenKodo.github.io/AnzenKodo",
-			"role": "Developer"
-		}
-	],
-	"support": {
-		"issues": "https://github.com/AnzenKodo/small-rss-php/issues",
-		"source": "https://github.com/AnzenKodo/small-rss-php"
-	},
-	"require": {
-		"php": ">=8.0"
-	},
-	"autoload": {
-		"classmap": ["src/"]
-	}
+  "name": "anzenkodo/rss-atom-parser",
+  "description": "RSS & Atom feed parser for PHP. Very small and easy-to-use library for parsing your feeds.",
+  "type": "library",
+  "keywords": [ "rss", "atom", "feed" ],
+  "homepage": "https://github.com/AnzenKodo/rss-atom-parser",
+  "readme": "https://github.com/AnzenKodo/rss-atom-parser/blob/main/README.md",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "AnzenKodo",
+      "email": "AnzenKodo@altmails.com",
+      "homepage": "https://AnzenKodo.github.io/AnzenKodo",
+      "role": "Developer"
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/AnzenKodo/rss-atom-parser/issues",
+    "source": "https://github.com/AnzenKodo/rss-atom-parser",
+    "docs": "https://github.com/AnzenKodo/rss-atom-parser/blob/main/README.md",
+  },
+  "funding": [
+    {
+      "type": "website",
+      "url": "https://AnzenKodo.github.io/AnzenKodo#support"
+    }
+  ],
+  "require": {
+    "php": ">=8.0"
+  },
+  "autoload": {
+    "classmap": [ "src/" ]
+  }
 }

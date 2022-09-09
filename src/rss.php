@@ -1,59 +1,155 @@
 <?php
 
 class RSS {
-	public static function feed(string|array|object $url): array {
+	public static $useragent = "FeedFetcher-Google";
+
+	public static function feed(string|array|object $url): object {
 		$data = array();
 
 		// If there are more then 1 $url in object and array type.
 		if (is_object($url) or is_array($url))
-			$data = self::multi_feed_data($url);
+			$data = self::getFeeds($url);
 		// If only 1 $url in string type.
-		else if (is_string($url))
-			$data = self::feed_data($url);
-		else {
+		else if (is_string($url)) {
+			$data = self::getFeed($url);
+		} else {
+			throw new ErrorException("Can't find datatype of {$url}");
 		}
 
 		return $data;
 	}
 
 	// For multiple feeds in array and object type only.
-	public static function multi_feed_data(array|object $urls): array {
+	public static function getFeeds(array|object $urls): object {
 		$data = array();
 
 		foreach ($urls as $url) {
 			$data[] = self::feed($url);
 		}
-		// Sort feed by time
-		usort($data, function($t1, $t2) {
-			$time1 = $t1['date']." ".$t1['time'];
-			$time2 = $t2['date']." ".$t2['time'];
 
-			return strtotime($time1) + strtotime($time2);
-		});
+		// Sort feed by time
+		$ord = array();
+		foreach ($data as $key){
+		    $ord[] = strtotime($key->item[0]->date);
+		}
+		array_multisort($ord, SORT_DESC, $data);
+		
+		return (object)$data;
+	}
+
+	// For single feed in string type.
+	public static function getFeed(string $url): object {
+		ini_set('user_agent', self::$useragent);
+
+		// Checks if $url content type is html. If it is HTML then finds the Feed
+		// url and changes $url to feed url.
+		$its_html = self::checkContentType($url, "html");
+		if($its_html) {
+			$content_html = self::getContent($url);
+			$url = self::getFeedUrl($content_html);
+		}
+
+		$content = self::getContent($url);
+
+		$xml = new SimpleXmlElement($content, true);
+		$data = (object)array();
+		if ($xml->channel) {					// If feed is xml vesrion 1.0
+			$data = self::getRSS($xml, $url);
+		}	else if($xml->entry) {			// If feed is xml version 2.0
+			$data = self::getAtom($xml, $url);
+		} else {
+		}
+
+		return (object)$data;
+	}
+
+	private static function isHttp(string $str, string $url, bool $boolean = false) {
+		if (preg_match("/^(https|http):\/\//", $str)) return $str;
+
+		if ($str[0] == "/") return preg_replace('/(?<=(\w|\d))\/.*$/', $str, $url);
+
+		if ($boolean) return false;
+
+		return $url;
+	}
+	
+	private static function getAtom(SimpleXMLElement $xml, string $url): array {
+		$title = $xml->id ? $xml->id : $url;
+		$title = $xml->title != "" ? $xml->title : $title;
+
+		// Find proper name
+		$replace = "";
+		if (isset($xml->link)) {
+			for ($x = 0; $x < 2; $x++) {
+				if ($xml->link[$x]["rel"] == "alternate") {
+					$replace = $xml->link[$x]["href"];
+					break;
+				} else {
+					$replace = $url;
+				}
+			}
+		} else if (isset($xml->author->uri)) {
+			$replace = $xml->author->uri;
+		} else {
+			$replace = $url;
+		}
+
+		$data = [
+			"title" => $title,
+			"description" => "$xml->subtitle",
+			"date" => self::timeFormat($xml->updated, "d-M-Y"),
+			"time" => self::timeFormat($xml->updated, "H:i"),
+			"link" => self::isHttp($replace, $url, true) ? self::isHttp($replace, $url) : self::isHttp($xml->id, $url),
+			"feed" => "$url",
+			"item" => array()
+		];
+
+		foreach ($xml->entry as $item) {
+			$time =	$item->updated ? $item->updated : $item->published;
+
+			$data_item = [
+				"title" => "$item->title",
+				"link" => self::isHttp($item->link["href"], $url),
+				"date" => self::timeFormat($time, "d-M-Y"),
+				"time" => self::timeFormat($time, "H:i")
+			];
+
+			array_push($data["item"], (object)$data_item);
+		}
 
 		return $data;
 	}
 
-	// For single feed in string type.
-	public static function feed_data(string $url): array {
-		// Checks if $url content type is html. If it is HTML then finds the Feed
-		// url and changes $url to feed url.
+	private static function getRSS(SimpleXMLElement $xml, string $url): array {
+		$xml = $xml->channel;
+		$time =	$xml->lastBuildDate ? $xml->lastBuildDate : $xml->pubDate;
 
-		$its_html = self::check_content_type($url, "html");
-		if($its_html) { $url = self::get_feed_url($content); }
+		$data = [
+			"title" => $xml->title != "" ? $xml->title : $xml->link,
+			"description" => "$xml->description",
+			"date" => self::timeFormat($time, "d-M-Y"),
+			"time" => self::timeFormat($time, "H:i"),
+			"link" => $xml->link != "" ? self::isHttp($xml->link, $url) : $url,
+			"feed" => $url,
+			"item" => array()
+		];
 
-		$content = self::get_content($url);
+		foreach ($xml->item as $item) {
+			$data_item = [
+				"title" => $item->title != "" ? $item->title : $item->link,
+				"link" => $item->link ? self::isHttp($item->link, $url) : $item->enclosure["url"],
+				"date" => self::timeFormat($item->pubDate, "d-M-Y"),
+				"time" => self::timeFormat($item->pubDate, "H:i")
+			];
 
-		$xml = self::get_feed($content);
+			array_push($data["item"], (object)$data_item);
+		}
 
-		return self::format_data($xml);
+		return $data;
 	}
 
-	// Simplifies the feed data.
-	private static function format_data(object $xml): array {
-		// Formats time and returns $type of time format.
-		$time_format = function(object|string $time, string $format = "d-M-Y H:i"):
-			string {
+	private static function timeFormat(object|string $time, string $format =
+		"d-M-Y H:i"): string {
 
 			// Convert to time format
 			$timestamp = strtotime("$time");
@@ -61,53 +157,10 @@ class RSS {
 			$time = date($format, $timestamp);
 
 			return $time;
-		};
-
-		// Formats the xml data
-		$data = [
-			"title" => "$xml->title",
-			"description" => "$xml->description",
-			"date" => $time_format($xml->lastBuildDate, "d-M-Y"),
-			"time" => $time_format($xml->lastBuildDate, "H:i"),
-			"link" => "$xml->link",
-			"item" => array()
-		];
-
-		// Formats the xml items data
-		foreach ($xml->item as $item) {
-			$data_item = [
-				"title" => "$item->title",
-				"link" => "$item->link",
-				"date" => $time_format($item->pubDate, "d-M-Y"),
-				"time" => $time_format($item->pubDate, "H:i")
-			];
-
-			array_push($data["item"], $data_item);
-		}
-
-		return $data;
-	}
-
-	// Checks feed xml version and returns content as per feed
-	private static function get_feed(string $content): object {
-		// Converts $content to object
-		$xml_data = new SimpleXmlElement($content, LIBXML_NOCDATA);
-
-		$xml = (object)array();				// Convert array to object
-
-		if ($xml_data->channel)				// If feed is xml vesrion 1.0
-			$xml = $xml_data->channel;
-		else if($xml_data->entry)			// If feed is xml version 2.0
-			$xml = $xml_data;
-		else {
-			/* self::console_log("$url: Invalid content type"); */
-		}
-
-		return $xml;
 	}
 
 	// Returns given $url page content
-	private static function get_content(string $url, $useragent = "FeedFetcher-Google"): string {
+	private static function getContent(string $url): string {
 		$curl = curl_init($url);
 
 		// Return the transfer as a string.
@@ -115,7 +168,9 @@ class RSS {
 		// The maximum number of seconds to allow cURL functions to execute.
 		curl_setopt($curl, CURLOPT_TIMEOUT, 60);
 		// Changes curl useragent
-		curl_setopt($curl, CURLOPT_USERAGENT, $useragent);
+		curl_setopt($curl, CURLOPT_USERAGENT, self::$useragent);
+		// To make cURL follow a redirect
+		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
 
 		// Given $url content
 		$content = curl_exec($curl);
@@ -126,7 +181,7 @@ class RSS {
 	}
 
 	// Finds Feed url from HTML.
-	private static function get_feed_url(string $content): string {
+	private static function getFeedUrl(string $content): string {
 		// Suppresses DOMDocuments errors
 		libxml_use_internal_errors(true);
 
@@ -153,24 +208,26 @@ class RSS {
 
 	// Checks given $content_type_name value matches given $url header content
 	// type.
-	private static function check_content_type(string $url, string
+	private static function checkContentType(string $url, string
 		$type_name): bool {
 		// Get $url header
 		$header = get_headers($url, true);
-
-		$content_type = "Content-Type";
-		// Contet type in lower case
-		$content_type_lower = strtolower($content_type);
+		$content_type = "";
 
 		// Find $type_name in header
-		$content_pos = strpos($header[$content_type], $type_name);
-		$content_pos_lower = strpos($header[$content_type_lower], $type_name);
+		if (isset($header["Content-Type"]))
+			$content_type = $header["Content-Type"];
+		else
+			$content_type = $header["content-type"];
 
-		if ($content_pos)
+		if (gettype($content_type) == "array")
+			$content_type = $content_type[0];
+		
+		if (strpos($content_type, $type_name))
 			$checked_header = true;
-		else if ($content_pos_lower)
+		else {
 			$checked_header = false;
-		else {}
+		}
 
 		return $checked_header;
 	}
