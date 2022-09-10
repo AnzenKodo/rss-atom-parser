@@ -101,6 +101,7 @@ class RSS {
 			"time" => self::timeFormat($xml->updated, "H:i"),
 			"link" => self::isHttp($replace, $url, true) ? self::isHttp($replace, $url) : self::isHttp($xml->id, $url),
 			"feed" => "$url",
+			"type" => "atom",
 			"item" => array()
 		];
 
@@ -131,6 +132,7 @@ class RSS {
 			"time" => self::timeFormat($time, "H:i"),
 			"link" => $xml->link != "" ? self::isHttp($xml->link, $url) : $url,
 			"feed" => $url,
+			"type" => "rss",
 			"item" => array()
 		];
 
