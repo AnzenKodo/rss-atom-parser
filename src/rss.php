@@ -1,4 +1,6 @@
 <?php
+error_reporting(0);
+ini_set('display_errors', 0);
 
 class RSS {
 	public static $useragent = "FeedFetcher-Google";
@@ -50,6 +52,12 @@ class RSS {
 		}
 
 		$content = self::getContent($url);
+		
+		try {
+			$xml = new SimpleXmlElement($content, true);
+		} catch(Exception $e) {
+			return (object)array();
+		}
 
 		$xml = new SimpleXmlElement($content, true);
 		$data = (object)array();
@@ -213,8 +221,23 @@ class RSS {
 	private static function checkContentType(string $url, string
 		$type_name): bool {
 		// Get $url header
-		$header = get_headers($url, true);
+
+		stream_context_set_default( [
+		    'ssl' => [
+		        'verify_peer' => false,
+		        'verify_peer_name' => false,
+		    ],
+		]);
+
+		$header = "";
 		$content_type = "";
+
+		$validhost = filter_var(gethostbyname(parse_url($url,PHP_URL_HOST)), FILTER_VALIDATE_IP);
+		if ($validhost) {
+			$header = get_headers($url, true);
+		} else {
+			return false;
+		}
 
 		// Find $type_name in header
 		if (isset($header["Content-Type"]))
