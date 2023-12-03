@@ -10,14 +10,14 @@
     {
       "name": "AnzenKodo",
       "email": "AnzenKodo@altmails.com",
-      "homepage": "https://AnzenKodo.github.io/AnzenKodo",
+      "homepage": "https://AnzenKodo.github.io",
       "role": "Developer"
     }
   ],
   "support": {
     "issues": "https://github.com/AnzenKodo/rss-atom-parser/issues",
     "source": "https://github.com/AnzenKodo/rss-atom-parser",
-    "docs": "https://github.com/AnzenKodo/rss-atom-parser/blob/main/README.md"
+    "docs": "https://github.com/AnzenKodo/rss-atom-parser#readme"
   },
   "funding": [
     {
